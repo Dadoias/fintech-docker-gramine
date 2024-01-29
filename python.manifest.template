@@ -8,7 +8,7 @@ libos.entrypoint = "{{ entrypoint }}"
 
 loader.log_level = "{{ log_level }}"
 
-loader.env.LD_LIBRARY_PATH = "/lib:/lib:{{ arch_libdir }}:/usr/{{ arch_libdir }}:/usr/lib/python3.9/site-packages/:/u/sw/toolchains/gcc-glibc/11.2.0/base/lib/"
+loader.env.LD_LIBRARY_PATH = "/lib:/lib:{{ arch_libdir }}:/usr/{{ arch_libdir }}"
 
 # Python's NumPy spawns as many threads as there are CPU cores, and each thread
 # consumes a chunk of memory, so on large machines 1G enclave size may be not enough.
@@ -57,4 +57,5 @@ sgx.trusted_files = [
 ]
 sgx.allowed_files = [
   "file:fintech_ex/uploads",
+  "file:fintech_ex",
 ]

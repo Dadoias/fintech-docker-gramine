@@ -7,44 +7,48 @@ from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from flask_cors import CORS
+import functools
+
+# to flush the print in gramine (sometime it gets stucked)
+print = functools.partial(print, flush=True)
 
 app = Flask(__name__)
 CORS(app)
 
-home_dir = os.path.expanduser("/fintech_ex")
-UPLOAD_FOLDER = os.path.join(home_dir, "uploads")
+# Set the path to the directory within our resources (data, model etc.)
+home_dir="/fintech_ex"
+# Gramine path to the uploads UPLOAD_FOLDER
+UPLOAD_FOLDER = Path(f"{home_dir}/uploads")
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
-ALLOWED_EXTENSIONS = {'csv'}
-DIRECTORY = Path("/fintech_ex/uploads")
-
-#computation_ID = os.environ.get("ID")
+# Accuracy and model file path
+accuracy_file = f"{home_dir}/accuracy.txt"
+model_file = f"{home_dir}/model.pkl"
 
 # Conttrolla se c'è '.' nel nome del file (quindi un estensione), inoltre controlla se l'estenione è tra quelle indicate in ALLOWED_EXTENTIONS
+ALLOWED_EXTENSIONS = {'csv'}
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 def read_in_files():
     map = (
-        pd.read_csv(DIRECTORY / "ca_relation_typed.csv")[["person_key", "account_key"]]
+        pd.read_csv(UPLOAD_FOLDER / "ca_relation_typed.csv")[["person_key", "account_key"]]
         .drop_duplicates("account_key", keep="first")
         .drop_duplicates("person_key", keep="first")
     )
-
-    account = pd.read_csv(DIRECTORY / "account_typed.csv").join(
+    account = pd.read_csv(UPLOAD_FOLDER / "account_typed.csv").join(
         map.set_index("account_key"), on="account_key"
     )
     account = account[~account.person_key.isna()]
-    deposit = pd.read_csv(DIRECTORY / "deposit_account_typed.csv").join(
+    deposit = pd.read_csv(UPLOAD_FOLDER / "deposit_account_typed.csv").join(
         map.set_index("person_key"), on="person_key"
     )
     deposit = deposit[~deposit.account_key.isna()]
-    payment = pd.read_csv(DIRECTORY / "payment_typed.csv").join(
+    payment = pd.read_csv(UPLOAD_FOLDER / "payment_typed.csv").join(
         map.set_index("account_key"), on="account_key"
     )
     payment = payment[~payment.person_key.isna()]
-    person = pd.read_csv(DIRECTORY / "person_typed.csv").join(
+    person = pd.read_csv(UPLOAD_FOLDER / "person_typed.csv").join(
         map.set_index("person_key"), on="person_key"
     )
     person = person[~person.account_key.isna()]
@@ -70,11 +74,9 @@ def clean_files(account, deposit, payment, person):
     max_delay = account.delay_days.max()
     # Create a copy of the DataFrame to avoid chained indexing issues
     account_copy = account.copy()
-
     account_copy.loc[:, 'delay_days'] = account_copy['delay_days'].apply(
         lambda x: ((x - min_delay) / (max_delay - min_delay)) * 210
     )
-
     deposit = deposit[
         [
             "account_key",
@@ -165,7 +167,7 @@ def write_accuracy_to_file(rf, X_test, y_test):
     y_pred = rf.predict(X_test)
     accuracy = accuracy_score(y_test, y_pred)
     try:
-        with open("accuracy.txt", "w") as file:
+        with open(accuracy_file, "w") as file:
             file.write(f"The accuracy of the model was: {accuracy:.4f}")
             print('writing the file')
     except:
@@ -195,7 +197,6 @@ def upload_file():
 
 @app.route('/insert_ID', methods=['POST'])
 def receive_ID():
-    print('11111111111')
     req_data = request.get_json()
     computation_ID = req_data["ID"]
     # Perform computation on the uploaded CSV file
@@ -206,15 +207,13 @@ def receive_ID():
     model = fit_model(X_train, y_train)
     write_accuracy_to_file(model, X_test, y_test)
 
-    with open("accuracy.txt", "r") as file:
+    with open(accuracy_file, "r") as file:
         content = file.read()
         print(content)
 
-    pickle.dump(model, open("model.pkl", "wb"))
+    pickle.dump(model, open(model_file, "wb"))
 
-    #computation_ID = '123456789'
     url = 'http://10.0.0.6:9000/computation_output'
-    #url = 'http://localhost:9000/computation_output'
     data = {'computation_ID': computation_ID, 'result': content}
     print(data)
     response = requests.post(url, json=data)
@@ -225,21 +224,20 @@ def receive_ID():
         print(response.text)
     else:
         print(f'POST request failed with status code: {response.status_code}')
-    print('2222222222222222')
     os.kill(os.getpid(), signal.SIGINT)
     return jsonify({'message': 'Computation success'}), 200
 
 
 if __name__ == '__main__':
     
-    if not DIRECTORY.exists():
-        DIRECTORY.mkdir(parents=True)
-    current_directory = os.getcwd()
+    if not UPLOAD_FOLDER.exists():
+        UPLOAD_FOLDER.mkdir(parents=True)
+    current_UPLOAD_FOLDER = os.getcwd()
     '''
-    print("Current Directory:", current_directory)
-    directory_contents = os.listdir(current_directory)
-    print("Directory Contents:")
-    for item in directory_contents:
+    print("Current UPLOAD_FOLDER:", current_UPLOAD_FOLDER)
+    UPLOAD_FOLDER_contents = os.listdir(current_UPLOAD_FOLDER)
+    print("UPLOAD_FOLDER Contents:")
+    for item in UPLOAD_FOLDER_contents:
         print(f"- {item}")
     
     script_dir = os.path.dirname(os.path.realpath(__file__))

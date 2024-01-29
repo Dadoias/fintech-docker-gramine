@@ -23,7 +23,7 @@ python.manifest: python.manifest.template
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
-		-Dentrypoint=/u/sw/toolchains/gcc-glibc/11.2.0/base/bin/python3 \
+		-Dentrypoint=/usr/bin/python3.9 \
 		-Dra_type=$(RA_TYPE) \
 		-Dra_client_spid=$(RA_CLIENT_SPID) \
 		-Dra_client_linkable=$(RA_CLIENT_LINKABLE) \
