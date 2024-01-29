@@ -233,16 +233,5 @@ if __name__ == '__main__':
     if not UPLOAD_FOLDER.exists():
         UPLOAD_FOLDER.mkdir(parents=True)
     current_UPLOAD_FOLDER = os.getcwd()
-    '''
-    print("Current UPLOAD_FOLDER:", current_UPLOAD_FOLDER)
-    UPLOAD_FOLDER_contents = os.listdir(current_UPLOAD_FOLDER)
-    print("UPLOAD_FOLDER Contents:")
-    for item in UPLOAD_FOLDER_contents:
-        print(f"- {item}")
-    
-    script_dir = os.path.dirname(os.path.realpath(__file__))
-    cert_path = os.path.join(script_dir, 'cert.pem')
-    key_path = os.path.join(script_dir, 'key.pem')
-    app.run(ssl_context=(cert_path, key_path), port=9444, host='0.0.0.0')'''
     #app.run(ssl_context=('cert.pem', 'key.pem'), port=9443, host='0.0.0.0') 
     app.run(port=9443, host='0.0.0.0')
