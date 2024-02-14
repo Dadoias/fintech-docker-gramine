@@ -18,6 +18,6 @@ RUN make SGX=1
 EXPOSE 9443
 EXPOSE 944
 
-CMD ["gramine-sgx ./python fintech_ex/fintech_server.py"]
+CMD ["gramine-sgx ./python fintech_ex/server.py"]
 #CMD ["python3 ./fintech_ex/test.py"]
 

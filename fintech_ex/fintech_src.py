@@ -12,22 +12,13 @@ import functools
 # to flush the print in gramine (sometime it gets stucked)
 print = functools.partial(print, flush=True)
 
-app = Flask(__name__)
-CORS(app)
-
 # Set the path to the directory within our resources (data, model etc.)
 home_dir="/fintech_ex"
 # Gramine path to the uploads UPLOAD_FOLDER
 UPLOAD_FOLDER = Path(f"{home_dir}/uploads")
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 # Accuracy and model file path
 accuracy_file = f"{home_dir}/accuracy.txt"
 model_file = f"{home_dir}/model.pkl"
-
-# Conttrolla se c'è '.' nel nome del file (quindi un estensione), inoltre controlla se l'estenione è tra quelle indicate in ALLOWED_EXTENTIONS
-ALLOWED_EXTENSIONS = {'csv'}
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 def read_in_files():
@@ -175,30 +166,8 @@ def write_accuracy_to_file(rf, X_test, y_test):
         sys.exit()
 
 
+if __name__ == '__main__':
 
-
-@app.get('/')
-def test():
-    return jsonify({'message': 'PROVA'}), 200
-
-@app.route('/upload', methods=['POST'])
-def upload_file():
-    uploaded_files = request.files.getlist('file')  # Get a list of uploaded files
-    if not uploaded_files:
-        return jsonify({'message': 'No files uploaded'}), 400
-
-    for file in uploaded_files:
-        if file.filename == '' or not allowed_file(file.filename):
-            return jsonify({'message': 'Invalid file(s) uploaded'}), 400
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], file.filename))
-
-    return jsonify({'message': 'File received'}), 200
-
-
-@app.route('/insert_ID', methods=['POST'])
-def receive_ID():
-    req_data = request.get_json()
-    computation_ID = req_data["ID"]
     # Perform computation on the uploaded CSV file
     accounts, deposits, payments, persons = read_in_files()
     accounts, deposits, payments, persons = clean_files(accounts, deposits, payments, persons)
@@ -206,32 +175,4 @@ def receive_ID():
     X_train, X_test, y_train, y_test = feature_engineering_train_test_split(full_df)
     model = fit_model(X_train, y_train)
     write_accuracy_to_file(model, X_test, y_test)
-
-    with open(accuracy_file, "r") as file:
-        content = file.read()
-        print(content)
-
     pickle.dump(model, open(model_file, "wb"))
-
-    url = 'http://10.0.0.6:9000/computation_output'
-    data = {'computation_ID': computation_ID, 'result': content}
-    print(data)
-    response = requests.post(url, json=data)
-
-    if response.status_code == 200:
-        print('POST request was successful!')
-        print('Response content:')
-        print(response.text)
-    else:
-        print(f'POST request failed with status code: {response.status_code}')
-    os.kill(os.getpid(), signal.SIGINT)
-    return jsonify({'message': 'Computation success'}), 200
-
-
-if __name__ == '__main__':
-    
-    if not UPLOAD_FOLDER.exists():
-        UPLOAD_FOLDER.mkdir(parents=True)
-    current_UPLOAD_FOLDER = os.getcwd()
-    #app.run(ssl_context=('cert.pem', 'key.pem'), port=9443, host='0.0.0.0') 
-    app.run(port=9443, host='0.0.0.0')
